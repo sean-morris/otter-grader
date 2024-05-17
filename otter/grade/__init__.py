@@ -129,11 +129,15 @@ def main(
     # Merge dataframes
     output_df = merge_csv(grade_dfs)
     cols = output_df.columns.tolist()
-    output_df = output_df[cols[-1:] + cols[:-1]]
-
+    pts_df = output_df[cols[-1:] + cols[:-1]][0:1]
+    scores_df = output_df[cols[-1:] + cols[:-1]][1:]
+    
     # write to CSV file
-    output_df.to_csv(os.path.join(output_dir, "final_grades.csv"), index=False)
-
+    scores_df.to_csv(os.path.join(output_dir, "final_grades.csv"), index=False)
+    with open("final_grades.csv", mode="a") as f:
+        f.write(os.linesep)
+    pts_df.to_csv(os.path.join(output_dir, "final_grades.csv"), index=False, mode="a", header=False)
+    
     # return percentage if a single file was graded
     if len(paths) == 1 and os.path.isfile(paths[0]):
-        return output_df["percent_correct"][0]
+        return scores_df["percent_correct"][0]
