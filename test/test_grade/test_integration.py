@@ -183,6 +183,7 @@ def test_single_notebook_grade(mocked_launch_grade):
         "q2b": 2.0,
         "q7": 1.0,
         "percent_correct": 1.0,
+        "total_points_earned": 15.0,
         "file": "passesAll.ipynb",
     }])
 
@@ -228,6 +229,7 @@ def test_config_overrides(mocked_launch_grade):
         "q2b": 2.0,
         "q7": 1.0,
         "percent_correct": 1.0,
+        "total_points_earned": 15.0,
         "file": "passesAll.ipynb",
     }])]
 
@@ -281,12 +283,16 @@ def test_config_overrides_integration():
         "q6": 5.0,
         "q2b": 2.0,
         "q7": 1.0,
-        "percent_correct": 1.0,
+        "percent_correct": 0.65,
+        "total_points_earned": 13.0,
         "file": os.path.splitext(os.path.basename(ZIP_SUBM_PATH))[0],
     }])
 
     # Sort the columns by label so the dataframes can be compared with ==.
     got = got.reindex(sorted(got.columns), axis=1)
+    print("got ======")
+    print(got)
     want = want.reindex(sorted(want.columns), axis=1)
-    
+    print("want ======")
+    print(want)
     assert got.equals(want)
