@@ -5,7 +5,7 @@ COVERAGE         = coverage
 DOCKER           = true
 SLOW             = true
 
-_PYTESTOPTS      := -vv --durations=0 --html=pytest-report.html --self-contained-html
+_PYTESTOPTS      := -vv -s --durations=0 --html=pytest-report.html --self-contained-html
 
 ifeq ($(DOCKER), false)
 	_PYTESTOPTS := $(_PYTESTOPTS) -m "not docker"

@@ -14,7 +14,7 @@ from python_on_whales import docker
 from textwrap import indent
 from typing import List, Optional
 
-from .utils import OTTER_DOCKER_IMAGE_NAME
+from .utils import OTTER_DOCKER_IMAGE_NAME, POINTS_POSSIBLE_LABEL
 
 from ..run.run_autograder.autograder_config import AutograderConfig
 from ..utils import loggers, OTTER_CONFIG_FILENAME
@@ -105,7 +105,6 @@ def launch_containers(
     pool = ThreadPoolExecutor(num_containers)
     futures = []
     image = build_image(ag_zip_path, base_image, tag, config)
-
     for subm_path in submission_paths:
         futures += [pool.submit(
             grade_submission,
@@ -117,7 +116,6 @@ def launch_containers(
 
     # stop execution while containers are running
     finished_futures = wait(futures)
-
     # return list of dataframes with points possible as first frame
     full_df = []
     for f in finished_futures[0]:
@@ -229,7 +227,7 @@ def grade_submission(
 
         pts_poss_dict = {t: [scores_dict[t]["possible"]] if type(scores_dict[t]) == dict else scores_dict[t] for t in scores_dict}
         scores_dict = {t: [scores_dict[t]["score"]] if type(scores_dict[t]) == dict else scores_dict[t] for t in scores_dict}
-        pts_poss_dict["file"] = "Points Per Question"
+        pts_poss_dict["file"] = POINTS_POSSIBLE_LABEL
         pts_poss_dict["percent_correct"] = "--"
         pts_poss_dict["total_points_earned"] = scores.possible
         scores_dict["file"] = nb_name

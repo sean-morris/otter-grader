@@ -106,7 +106,6 @@ def main(
     LOGGER.debug(f"Resolved submission paths: {submission_paths}")
 
     pdf_dir = os.path.join(output_dir, "submission_pdfs") if pdfs else None
-
     grade_dfs = launch_containers(
         autograder,
         submission_paths,
@@ -129,15 +128,10 @@ def main(
     # Merge dataframes
     output_df = merge_csv(grade_dfs)
     cols = output_df.columns.tolist()
-    pts_df = output_df[cols[-1:] + cols[:-1]][0:1]
-    scores_df = output_df[cols[-1:] + cols[:-1]][1:]
-    
+    output_df = output_df[cols[-1:] + cols[:-1]]
     # write to CSV file
-    scores_df.to_csv(os.path.join(output_dir, "final_grades.csv"), index=False)
-    with open("final_grades.csv", mode="a") as f:
-        f.write(os.linesep)
-    pts_df.to_csv(os.path.join(output_dir, "final_grades.csv"), index=False, mode="a", header=False)
+    output_df.to_csv(os.path.join(output_dir, "final_grades.csv"), index=False)
     
     # return percentage if a single file was graded
     if len(paths) == 1 and os.path.isfile(paths[0]):
-        return scores_df["percent_correct"][0]
+        return output_df["percent_correct"][1]
