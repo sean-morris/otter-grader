@@ -89,8 +89,8 @@ def test_timeout_some_notebooks_finish():
         containers = 5,
         timeout = grade_timeout,
     )
-    df_test = pd.read_csv("test/final_grades.csv")
-    assert df_test.iloc[0]["grading_status"] == "--"
+    df_test = pd.read_csv("test/final_grades.csv", na_values='--')
+    assert pd.isna(df_test.iloc[0]["grading_status"])
     assert df_test.iloc[1]["grading_status"] == "Completed"
     pattern = rf"Executing '[\w.\/-]*test\/test_grade\/files\/timeout\/1min\.ipynb' in docker container timed out in {grade_timeout} seconds"
     assert re.match(pattern, df_test.iloc[2]["grading_status"]) is not None
@@ -112,7 +112,7 @@ def test_timeout_no_notebooks_finish():
         containers = 5,
         timeout = grade_timeout,
     )
-    df_test = pd.read_csv("test/final_grades.csv")
+    df_test = pd.read_csv("test/final_grades.csv", na_values='--')
     pattern1min = rf"Executing '[\w.\/-]*test\/test_grade\/files\/timeout\/1min\.ipynb' in docker container timed out in {grade_timeout} seconds"
     pattern10s = rf"Executing '[\w.\/-]*test\/test_grade\/files\/timeout\/10s\.ipynb' in docker container timed out in {grade_timeout} seconds"
     assert re.match(pattern10s, df_test.iloc[0]["grading_status"]) is not None
@@ -135,7 +135,7 @@ def test_network(expected_points):
         no_network = True,
     )
 
-    df_test = pd.read_csv("test/final_grades.csv")
+    df_test = pd.read_csv("test/final_grades.csv", na_values='--')
 
     # sort by filename
     df_test = df_test.sort_values("file").reset_index(drop=True)
@@ -164,7 +164,7 @@ def test_notebooks_with_pdfs(expected_points):
     )
 
     # read the output and expected output
-    df_test = pd.read_csv("test/final_grades.csv")
+    df_test = pd.read_csv("test/final_grades.csv", na_values='--')
 
     # sort by filename
     df_test = df_test.sort_values("file").reset_index(drop=True)
@@ -216,6 +216,7 @@ def test_single_notebook_grade(mocked_launch_grade):
         "percent_correct": float('nan'),
         "total_points_earned": 15.0,
         "file": POINTS_POSSIBLE_LABEL,
+        "grading_status": "--"
     },{
         "q1": 2.0,
         "q2": 2.0,
@@ -227,6 +228,7 @@ def test_single_notebook_grade(mocked_launch_grade):
         "percent_correct": 0.933333,
         "total_points_earned": 14.0,
         "file": "passesAll.ipynb",
+        "grading_status": "Completed"
     }])
 
     notebook_path = FILE_MANAGER.get_path("notebooks/passesAll.ipynb")
@@ -273,6 +275,7 @@ def test_config_overrides(mocked_launch_grade):
         "percent_correct": float('nan'),
         "total_points_earned": 15.0,
         "file": POINTS_POSSIBLE_LABEL,
+        "grading_status": "--"
     },{
         "q1": 2.0,
         "q2": 2.0,
@@ -284,6 +287,7 @@ def test_config_overrides(mocked_launch_grade):
         "percent_correct": 1.0,
         "total_points_earned": 15.0,
         "file": "passesAll.ipynb",
+        "grading_status": "Completed"
     }])]
 
     notebook_path = FILE_MANAGER.get_path("notebooks/passesAll.ipynb")
@@ -327,7 +331,7 @@ def test_config_overrides_integration():
 
     assert output == 1.0
 
-    got = pd.read_csv("test/final_grades.csv")
+    got = pd.read_csv("test/final_grades.csv", na_values='--')
     want = pd.DataFrame([{
         "q1": 0.0,
         "q2": 2.0,
@@ -339,6 +343,7 @@ def test_config_overrides_integration():
         "percent_correct": float('nan'),
         "total_points_earned": 13.0,
         "file": POINTS_POSSIBLE_LABEL,
+        "grading_status": float('nan')
     },{
         "q1": 0.0,
         "q2": 2.0,
@@ -350,6 +355,7 @@ def test_config_overrides_integration():
         "percent_correct": 1.0,
         "total_points_earned": 13.0,
         "file": os.path.splitext(os.path.basename(ZIP_SUBM_PATH))[0],
+        "grading_status": "Completed"
     }])
 
     # Sort the columns by label so the dataframes can be compared with ==.

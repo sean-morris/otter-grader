@@ -7,10 +7,15 @@ from glob import glob
 from typing import List, Optional, Tuple, Union
 
 from .containers import launch_containers
-from .utils import merge_csv, prune_images, \
-                    SCORES_DICT_FILE_KEY, SCORES_DICT_PERCENT_CORRECT_KEY,  SCORES_DICT_TOTAL_POINTS_KEY, \
-                    SCORES_DICT_GRADING_STATUS_KEY, SCORES_DICT_SUMMARY_KEY
-
+from .utils import (
+    merge_csv,
+    prune_images,
+    SCORES_DICT_FILE_KEY,
+    SCORES_DICT_PERCENT_CORRECT_KEY,
+    SCORES_DICT_TOTAL_POINTS_KEY,
+    SCORES_DICT_GRADING_STATUS_KEY,
+    SCORES_DICT_SUMMARY_KEY
+)
 from ..run.run_autograder.autograder_config import AutograderConfig
 from ..utils import assert_path_exists, loggers
 
@@ -131,11 +136,23 @@ def main(
     # Merge dataframes
     output_df = merge_csv(grade_dfs)
     cols = output_df.columns.tolist()
-    question_cols = sorted(c for c in cols if c not in {SCORES_DICT_FILE_KEY, SCORES_DICT_TOTAL_POINTS_KEY, SCORES_DICT_PERCENT_CORRECT_KEY, SCORES_DICT_GRADING_STATUS_KEY, SCORES_DICT_SUMMARY_KEY})
-    output_df = output_df[[SCORES_DICT_FILE_KEY, *question_cols, SCORES_DICT_TOTAL_POINTS_KEY, SCORES_DICT_PERCENT_CORRECT_KEY, SCORES_DICT_GRADING_STATUS_KEY]]
+    question_cols = sorted(c for c in cols if c not in {
+        SCORES_DICT_FILE_KEY,
+        SCORES_DICT_TOTAL_POINTS_KEY,
+        SCORES_DICT_PERCENT_CORRECT_KEY,
+        SCORES_DICT_GRADING_STATUS_KEY,
+        SCORES_DICT_SUMMARY_KEY
+    })
+    output_df = output_df[[
+        SCORES_DICT_FILE_KEY,
+        *question_cols,
+        SCORES_DICT_TOTAL_POINTS_KEY,
+        SCORES_DICT_PERCENT_CORRECT_KEY,
+        SCORES_DICT_GRADING_STATUS_KEY
+    ]]
 
     # write to CSV file
-    output_df.to_csv(os.path.join(output_dir, "final_grades.csv"), index=False)
+    output_df.to_csv(os.path.join(output_dir, "final_grades.csv"), na_rep='--', index=False)
 
     # return percentage if a single file was graded
     if len(paths) == 1 and os.path.isfile(paths[0]):
