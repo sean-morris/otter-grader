@@ -7,9 +7,11 @@ import pkg_resources
 import shutil
 import tempfile
 import zipfile
+import queue
+import asyncio
 from otter.test_files import GradingResults
 
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor
 from python_on_whales import docker
 from textwrap import indent
 from typing import List, Optional
@@ -18,13 +20,12 @@ from .utils import OTTER_DOCKER_IMAGE_NAME, merge_scores_to_df, TimeoutException
 
 from ..run.run_autograder.autograder_config import AutograderConfig
 from ..utils import loggers, OTTER_CONFIG_FILENAME
+import nest_asyncio
 
+# Apply the nest_asyncio patch
+nest_asyncio.apply()
 
 LOGGER = loggers.get_logger(__name__)
-
-
-class TimeoutException(Exception):
-    pass
 
 
 def build_image(ag_zip_path: str, base_image: str, tag: str, config: AutograderConfig):
@@ -76,13 +77,22 @@ def build_image(ag_zip_path: str, base_image: str, tag: str, config: AutograderC
     return image
 
 
-def launch_containers(
+def run_async_in_thread(coro):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    result = loop.run_until_complete(coro)
+    loop.close()
+    return result
+
+
+async def launch_containers(
     ag_zip_path: str,
     submission_paths: List[str],
     num_containers: int,
     base_image: str,
     tag: str,
     config: AutograderConfig,
+    result_queue: queue.Queue,
     **kwargs,
 ):
     """
@@ -108,30 +118,37 @@ def launch_containers(
     """
     pool = ThreadPoolExecutor(num_containers)
     futures = []
+    result_queue.put(f"Building image {base_image}:{tag}")
     image = build_image(ag_zip_path, base_image, tag, config)
 
     for subm_path in submission_paths:
-        futures += [pool.submit(
-            grade_submission,
-            submission_path=subm_path,
-            image=image,
-            # config=config,
-            **kwargs,
-        )]
-
-    # stop execution while containers are running
-    finished_futures = wait(futures)
-    scores = [f.result() for f in finished_futures[0]]
+        futures += [asyncio.wrap_future(pool.submit(
+            run_async_in_thread,
+            grade_submission(
+                submission_path=subm_path,
+                image=image,
+                # config=config,
+                result_queue=result_queue,
+                **kwargs)
+        ))]
+    result_queue.put(f"Notebooks to grade: {len(futures)}")
+    scores = []
+    for i, future in enumerate(asyncio.as_completed(futures)):
+        result = await future
+        scores.append(result)
+        result_queue.put(f"{result.file} complete: {i+1}/{len(futures)}")
+    result_queue.put(f"Notebooks graded: {len(futures)}")
     return merge_scores_to_df(scores)
 
 
-def grade_submission(
+async def grade_submission(
     submission_path: str,
     image: str,
     no_kill: bool = False,
     pdf_dir: Optional[str] = None,
     timeout: Optional[int] = None,
     network: bool = True,
+    result_queue: queue.Queue = None,
 ):
     """
     Grade a submission in a Docker container.
@@ -199,6 +216,7 @@ def grade_submission(
         container_id = container.id[:12]
         LOGGER.info(f"Grading {submission_path} in container {container_id}...")
 
+        result_queue.put(f"Grading {nb_name}")
         exit = docker.container.wait(container)
 
         if timeout:

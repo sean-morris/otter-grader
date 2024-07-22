@@ -2,6 +2,7 @@
 
 import os
 import re
+import queue
 
 from glob import glob
 from typing import List, Optional, Tuple, Union
@@ -25,7 +26,7 @@ _ALLOWED_EXTENSIONS = ["ipynb", "py", "Rmd", "R", "r", "zip"]
 LOGGER = loggers.get_logger(__name__)
 
 
-def main(
+async def main(
     *,
     name: Optional[str] = None,
     paths: Optional[Union[List[str], Tuple[str]]] = None,
@@ -41,6 +42,7 @@ def main(
     timeout: bool = None,
     no_network: bool = False,
     debug: bool = False,
+    result_queue: queue.Queue = None
 ):
     """
     Run Otter Grade.
@@ -115,7 +117,8 @@ def main(
 
     pdf_dir = os.path.join(output_dir, "submission_pdfs") if pdfs else None
 
-    grade_dfs = launch_containers(
+    result_queue.put("Launching Grading Process")
+    grade_dfs = await launch_containers(
         autograder,
         submission_paths,
         num_containers = containers,
@@ -130,10 +133,12 @@ def main(
             "pdf": pdfs,
             "debug": debug,
         }),
+        result_queue = result_queue
     )
 
     LOGGER.info("Combining grades and saving")
 
+    result_queue.put(name, "Combining grades and saving")
     # Merge dataframes
     output_df = merge_csv(grade_dfs)
     cols = output_df.columns.tolist()

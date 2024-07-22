@@ -3,6 +3,7 @@
 import click
 import functools
 import logging
+import asyncio
 
 from .assign import main as assign
 from .check import main as check
@@ -146,7 +147,7 @@ def grade_cli(*args, **kwargs):
     Grade submissions in PATHS locally using Docker containers. PATHS can be individual file paths
     or directories containing submissions ending with extension EXT.
     """
-    g = grade(*args, **kwargs)
+    g = asyncio.run(grade(*args, **kwargs))
     if g is not None:
         click.echo(g)
     return g
